@@ -74,6 +74,20 @@ class Chef
             end
           end
 
+          def whatinstalled
+            with_helper do
+              stdin.syswrite "whatinstalled\n"
+              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
+            end
+          end
+
+          def whatavailable
+            with_helper do
+              stdin.syswrite "whatavailable\n"
+              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
+            end
+          end
+
           def restart
             reap unless stdin.nil?
             start
