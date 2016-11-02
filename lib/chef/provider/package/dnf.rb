@@ -31,7 +31,7 @@ class Chef
           end
 
           def version_with_arch
-            "#{x.version}.#{x.arch}" unless verison.nil?
+            "#{x.version}.#{x.arch}" unless version.nil?
           end
         end
 
@@ -171,7 +171,7 @@ class Chef
         end
 
         # here is where all the magic is.  the available versions must be returned
-        # by the python helper in the preferred order.  if we find an available verison
+        # by the python helper in the preferred order.  if we find an available version
         # that matches something that is installed we pick that one.  if nothing
         # matches then we pick whatever the python script returned first.
         def resolve_package(package_name)

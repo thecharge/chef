@@ -24,7 +24,13 @@ def whatprovides(arg):
     q = q.available()
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
     pkg = pkgs.pop(0)
-    sys.stdout.write('{} {}:{}-{}.{}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
+    sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
+
+def whatinstalled(arg):
+    sys.stdout.write('\n')
+
+def whatavailable(arg):
+    sys.stdout.write('tcpdump 14:4.7.4-3.fc23 x86_64\n')
 
 while 1:
     line = sys.stdin.readline()
@@ -32,5 +38,9 @@ while 1:
     command = args.pop(0)
     if command == "whatprovides":
         whatprovides(args.pop(0))
+    elif command == "whatinstalled":
+        whatinstalled(args.pop(0))
+    elif command == "whatavailable":
+        whatavailable(args.pop(0))
     else:
         raise RuntimeError("bad command")
