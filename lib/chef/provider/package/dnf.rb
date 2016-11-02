@@ -74,16 +74,18 @@ class Chef
             end
           end
 
-          def whatinstalled
+          # @returns Array<Version>
+          def whatinstalled(package_name)
             with_helper do
-              stdin.syswrite "whatinstalled\n"
+              stdin.syswrite "whatinstalled #{package_name}\n"
               stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
             end
           end
 
+          # @returns Array<Version>
           def whatavailable
             with_helper do
-              stdin.syswrite "whatavailable\n"
+              stdin.syswrite "whatavailable #{package_name}\n"
               stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
             end
           end
