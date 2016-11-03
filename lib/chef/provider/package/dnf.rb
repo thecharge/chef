@@ -85,7 +85,6 @@ class Chef
             with_helper do
               stdin.syswrite "whatinstalled #{package_name}\n"
               output = stdout.sysread(4096)
-              puts output
               output.split.each_slice(3).map { |x| Version.new(*x) }
             end
           end
@@ -95,8 +94,13 @@ class Chef
             with_helper do
               stdin.syswrite "whatavailable #{package_name}\n"
               output = stdout.sysread(4096)
-              puts output
               output.split.each_slice(3).map { |x| Version.new(*x) }
+            end
+          end
+
+          def flushcache
+            with_helper do
+              stdin.syswrite "flushcache\n"
             end
           end
 
@@ -157,6 +161,7 @@ class Chef
 
         def install_package(name, version)
           dnf(new_resource.options, "-y install", zip(name, version))
+          flushcache
         end
 
         # dnf upgrade does not work on uninstalled packaged, while install will upgrade
@@ -164,6 +169,7 @@ class Chef
 
         def remove_package(name, version)
           dnf(new_resource.options, "-y remove", zip(name, version))
+          flushcache
         end
 
         alias_method :purge_package, :remove_package
@@ -178,6 +184,10 @@ class Chef
         # @returns Array<Version>
         def installed_versions(package_name)
           python_helper.whatinstalled(package_name)
+        end
+
+        def flushcache
+          python_helper.flushcache
         end
 
         # here is where all the magic is.  the available versions must be returned

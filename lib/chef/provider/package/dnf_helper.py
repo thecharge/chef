@@ -10,12 +10,16 @@ from pprint import pprint
 base = None
 
 def get_sack():
-#    global base
-#    if base is None:
-    base = dnf.Base()
-    base.read_all_repos()
-    base.fill_sack()
+    global base
+    if base is None:
+        base = dnf.Base()
+        base.read_all_repos()
+        base.fill_sack()
     return base.sack
+
+def flushcache():
+    global base
+    base = None
 
 def whatavailable(arg):
     sack = get_sack()
@@ -44,12 +48,13 @@ def whatinstalled(arg):
 while 1:
     line = sys.stdin.readline()
     args = line.split()
-    command = args.pop(0)
-    if command == "whatprovides":
-        whatprovides(args.pop(0))
-    elif command == "whatinstalled":
-        whatinstalled(args.pop(0))
-    elif command == "whatavailable":
-        whatavailable(args.pop(0))
-    else:
-        raise RuntimeError("bad command")
+    if args:
+        command = args.pop(0)
+        if command == "whatinstalled":
+            whatinstalled(args.pop(0))
+        elif command == "whatavailable":
+            whatavailable(args.pop(0))
+        elif command == "flushcache":
+            flushcache()
+        else:
+            raise RuntimeError("bad command")
