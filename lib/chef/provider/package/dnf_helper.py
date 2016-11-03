@@ -27,7 +27,7 @@ def whatprovides(arg):
     sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
 
 def whatinstalled(arg):
-    sys.stdout.write('\n')
+    sys.stdout.write('tcpdump 13:4.7.4-3.fc23 x86_64\n')
 
 def whatavailable(arg):
     sys.stdout.write('tcpdump 14:4.7.4-3.fc23 x86_64\n')

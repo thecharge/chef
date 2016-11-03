@@ -27,11 +27,15 @@ class Chef
 
         Version = Struct.new(:name, :version, :arch) do
           def to_s
-            "#{x.name}-#{x.version}.#{x.arch}"
+            "#{name}-#{version}.#{arch}"
           end
 
           def version_with_arch
-            "#{x.version}.#{x.arch}" unless version.nil?
+            "#{version}.#{arch}" unless version.nil?
+          end
+
+          def matches_name_and_arch?(other)
+            other.version == version && other.arch == arch
           end
         end
 
@@ -70,7 +74,7 @@ class Chef
           def whatprovides(package_name)
             with_helper do
               stdin.syswrite "whatprovides #{package_name}\n"
-              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
+              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(*x) }
             end
           end
 
@@ -78,15 +82,15 @@ class Chef
           def whatinstalled(package_name)
             with_helper do
               stdin.syswrite "whatinstalled #{package_name}\n"
-              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
+              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(*x) }
             end
           end
 
           # @returns Array<Version>
-          def whatavailable
+          def whatavailable(package_name)
             with_helper do
               stdin.syswrite "whatavailable #{package_name}\n"
-              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(x) }
+              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(*x) }
             end
           end
 
@@ -174,7 +178,7 @@ class Chef
         # by the python helper in the preferred order.  if we find an available version
         # that matches something that is installed we pick that one.  if nothing
         # matches then we pick whatever the python script returned first.
-        def resolve_package(package_name)
+        def resolve_package(package_name, idx)
           available_list = available_versions(package_name)
           installed_list = installed_versions(package_name)
           # pick the first one that matches an installed version
@@ -193,9 +197,9 @@ class Chef
           # are actually at the point where we really know what the installed version should be
           # (we do NOT do this resolution early because we want to avoid expensively
           # resolving the candidate_version for the idempotency check)
-          current_resource.version[package_name] = installed.version_with_arch if installed
-          candidate_version[package_name] = available.version_with_arch if available
-          real_name[package_name] = available.name if available
+          current_resource.version[idx] = installed.version_with_arch if installed
+          candidate_version[idx] = available.version_with_arch if available
+          @real_name[package_name] = available.name if available
         end
 
         # loop over all the packages and resolve them to find the candidate_version, the
@@ -203,16 +207,16 @@ class Chef
         # whatprovides syntax), and then we fix up the current_resource.version that is
         # installed.
         def resolve_packages
-          @candidate_version ||= {}
+          @candidate_version ||= []
           @real_name ||= {}
-          package_name_array.map do |pkg|
-            resolve_package(pkg)
+          package_name_array.each_with_index.map do |pkg, idx|
+            resolve_package(pkg, idx)
           end
         end
 
         def zip(names, versions)
           names.zip(versions).map do |n, v|
-            (v.nil? || v.empty?) ? n : "#{@real_name[n]}-#{v}"
+            (v.nil? || v.empty?) ? @real_name[n] : "#{@real_name[n]}-#{v}"
           end
         end
 
