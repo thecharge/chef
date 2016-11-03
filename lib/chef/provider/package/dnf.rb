@@ -107,7 +107,7 @@ class Chef
               check
               yield
             end
-          rescue EOFError, Errno::EPIPE, Timeout::Error => e
+          rescue EOFError, Errno::EPIPE, Timeout::Error, Errno::ESRCH => e
             raise e unless ( max_retries -= 1 ) > 0
             restart
             retry
