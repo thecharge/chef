@@ -84,8 +84,9 @@ class Chef
           def whatinstalled(package_name)
             with_helper do
               stdin.syswrite "whatinstalled #{package_name}\n"
-              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(*x) }
-              puts stdout
+              output = stdout.sysread(4096)
+              puts output
+              output.split.each_slice(3).map { |x| Version.new(*x) }
             end
           end
 
@@ -93,8 +94,9 @@ class Chef
           def whatavailable(package_name)
             with_helper do
               stdin.syswrite "whatavailable #{package_name}\n"
-              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(*x) }
-              puts stdout
+              output = stdout.sysread(4096)
+              puts output
+              output.split.each_slice(3).map { |x| Version.new(*x) }
             end
           end
 
