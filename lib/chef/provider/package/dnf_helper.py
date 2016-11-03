@@ -17,20 +17,29 @@ def get_sack():
         base.fill_sack()
     return base.sack
 
-def whatprovides(arg):
+def whatavailable(arg):
     sack = get_sack()
     subj = dnf.subject.Subject(arg)
     q = subj.get_best_query(sack)
     q = q.available()
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
-    pkg = pkgs.pop(0)
-    sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
+    if not pkgs:
+        sys.stdout.write('{} nil nil\n'.format(arg))
+    else:
+        pkg = pkgs.pop(0)
+        sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
 
 def whatinstalled(arg):
-    sys.stdout.write('tcpdump 13:4.7.4-3.fc23 x86_64\n')
-
-def whatavailable(arg):
-    sys.stdout.write('tcpdump 14:4.7.4-3.fc23 x86_64\n')
+    sack = get_sack()
+    subj = dnf.subject.Subject(arg)
+    q = subj.get_best_query(sack)
+    q = q.installed()
+    pkgs = dnf.query.latest_limit_pkgs(q, 1)
+    if not pkgs:
+        sys.stdout.write('{} nil nil\n'.format(arg))
+    else:
+        pkg = pkgs.pop(0)
+        sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
 
 while 1:
     line = sys.stdin.readline()

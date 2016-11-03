@@ -25,7 +25,17 @@ class Chef
       class Dnf < Chef::Provider::Package
         extend Chef::Mixin::Which
 
-        Version = Struct.new(:name, :version, :arch) do
+        class Version
+          attr_accessor :name
+          attr_accessor :version
+          attr_accessor :arch
+
+          def initialize(name, version, arch)
+            @name = name
+            @version = ( version == "nil" ) ? nil : version
+            @arch = ( arch == "nil" ) ? nil : arch
+          end
+
           def to_s
             "#{name}-#{version}.#{arch}"
           end
@@ -68,14 +78,6 @@ class Chef
 
           def check
             start if stdin.nil?
-          end
-
-          # @returns Array<Version>
-          def whatprovides(package_name)
-            with_helper do
-              stdin.syswrite "whatprovides #{package_name}\n"
-              stdout.sysread(4096).split.each_slice(3).map { |x| Version.new(*x) }
-            end
           end
 
           # @returns Array<Version>
