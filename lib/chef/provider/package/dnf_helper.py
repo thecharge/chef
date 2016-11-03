@@ -10,11 +10,11 @@ from pprint import pprint
 base = None
 
 def get_sack():
-    global base
-    if base is None:
-        base = dnf.Base()
-        base.read_all_repos()
-        base.fill_sack()
+#    global base
+#    if base is None:
+    base = dnf.Base()
+    base.read_all_repos()
+    base.fill_sack()
     return base.sack
 
 def whatavailable(arg):

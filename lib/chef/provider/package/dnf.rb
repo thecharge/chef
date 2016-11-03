@@ -200,8 +200,8 @@ class Chef
           # (we do NOT do this resolution early because we want to avoid expensively
           # resolving the candidate_version for the idempotency check)
           current_resource.version[idx] = installed.version_with_arch if installed
-          candidate_version[idx] = available.version_with_arch if available
-          @real_name[package_name] = available.name if available
+          candidate_version[idx]        = available.version_with_arch if available
+          @real_name[package_name]      = available.name if available
         end
 
         # loop over all the packages and resolve them to find the candidate_version, the
@@ -210,7 +210,7 @@ class Chef
         # installed.
         def resolve_packages
           @candidate_version ||= []
-          @real_name ||= {}
+          @real_name         ||= {}
           package_name_array.each_with_index.map do |pkg, idx|
             resolve_package(pkg, idx)
           end
