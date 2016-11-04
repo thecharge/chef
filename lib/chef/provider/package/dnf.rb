@@ -178,12 +178,14 @@ class Chef
 
         # @returns Array<Version>
         def available_versions(package_name)
-          python_helper.whatavailable(package_name)
+          @available_versions ||= {}
+          @available_versions[package_name] ||= python_helper.whatavailable(package_name)
         end
 
         # @returns Array<Version>
         def installed_versions(package_name)
-          python_helper.whatinstalled(package_name)
+          @installed_versions ||= {}
+          @installed_versions[package_name] ||= python_helper.whatinstalled(package_name)
         end
 
         def flushcache
