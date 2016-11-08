@@ -5,6 +5,7 @@ import sys
 import dnf
 import hawkey
 import signal
+import os
 
 from pprint import pprint
 
@@ -89,9 +90,9 @@ signal.signal(signal.SIGPIPE, exit_handler)
 signal.signal(signal.SIGCHLD, exit_handler)
 
 while 1:
-    #ppid = os.getppid()
-    #if ppid == 1:
-    #    sys.exit(0)
+    ppid = os.getppid()
+    if ppid == 1:
+        sys.exit(0)
     line = sys.stdin.readline()
     args = line.split()
     if args:
