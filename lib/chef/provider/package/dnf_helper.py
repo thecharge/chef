@@ -4,6 +4,7 @@
 import sys
 import dnf
 import hawkey
+import signal
 
 from pprint import pprint
 
@@ -24,8 +25,25 @@ def flushcache():
 def whatavailable(arg):
     sack = get_sack()
     subj = dnf.subject.Subject(arg)
+
     q = subj.get_best_query(sack)
+    q_kwargs = {}
+
+    # handle arch
+    poss = dnf.util.first(subj.subj.nevra_possibilities_real(sack, allow_globs=True))
+    if not poss:
+      sys.stdout.write('{} nil nil\n'.format(arg))
+      return
+
+    if poss.arch:
+      q_kwargs['arch'] = [ 'noarch', poss.arch ]
+    else:
+      q_kwargs['arch'] = [ 'noarch', hawkey.detect_arch() ]
+
     q = q.available()
+
+    q = q.filter(**q_kwargs)
+
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
     if not pkgs:
         sys.stdout.write('{} nil nil\n'.format(arg))
@@ -36,8 +54,25 @@ def whatavailable(arg):
 def whatinstalled(arg):
     sack = get_sack()
     subj = dnf.subject.Subject(arg)
+
     q = subj.get_best_query(sack)
+    q_kwargs = {}
+
+    # handle arch
+    poss = dnf.util.first(subj.subj.nevra_possibilities_real(sack, allow_globs=True))
+    if not poss:
+      sys.stdout.write('{} nil nil\n'.format(arg))
+      return
+
+    if poss.arch:
+      q_kwargs['arch'] = [ 'noarch', poss.arch ]
+    else:
+      q_kwargs['arch'] = [ 'noarch', hawkey.detect_arch() ]
+
     q = q.installed()
+
+    q = q.filter(**q_kwargs)
+
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
     if not pkgs:
         sys.stdout.write('{} nil nil\n'.format(arg))
@@ -45,7 +80,18 @@ def whatinstalled(arg):
         pkg = pkgs.pop(0)
         sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
 
+def exit_handler(signal, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, exit_handler)
+signal.signal(signal.SIGHUP, exit_handler)
+signal.signal(signal.SIGPIPE, exit_handler)
+signal.signal(signal.SIGCHLD, exit_handler)
+
 while 1:
+    #ppid = os.getppid()
+    #if ppid == 1:
+    #    sys.exit(0)
     line = sys.stdin.readline()
     args = line.split()
     if args:
@@ -58,3 +104,5 @@ while 1:
             flushcache()
         else:
             raise RuntimeError("bad command")
+    else:
+        sys.exit(0)
