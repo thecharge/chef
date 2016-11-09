@@ -99,9 +99,10 @@ class Chef
           end
 
           def flushcache
-            with_helper do
-              stdin.syswrite "flushcache\n"
-            end
+            restart # FIXME: make flushcache not leak memory
+            #with_helper do
+            #  stdin.syswrite "flushcache\n"
+            #end
           end
 
           def restart
@@ -173,6 +174,10 @@ class Chef
         end
 
         alias_method :purge_package, :remove_package
+
+        action :flush_cache do
+          python_helper.flushcache
+        end
 
         private
 

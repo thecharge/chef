@@ -25,6 +25,8 @@ class Chef
 
       resource_name :dnf_package
 
+      allowed_actions :install, :upgrade, :remove, :purge, :reconfig, :lock, :unlock, :flush_cache
+
       provides :package, os: "linux", platform_family: %w{rhel fedora} do
         which("dnf")
       end

@@ -19,9 +19,12 @@ def get_sack():
         base.fill_sack()
     return base.sack
 
+# FIXME: this leaks memory like a sieve
 def flushcache():
     global base
-    base = None
+    if base is not None:
+        base.close()
+        base = None
 
 def whatavailable(arg):
     sack = get_sack()

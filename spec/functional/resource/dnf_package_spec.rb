@@ -52,9 +52,45 @@ gpgcheck=0
 
   describe ":install" do
     5.times do |i|
-      it "works #{i}" do
+      it "installs if the package is not installed #{i}" do
+        dnf_package.run_action(:flush_cache)
         dnf_package.run_action(:install)
+        expect(dnf_package.updated_by_last_action?).to be true
         expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.x86_64")
+      end
+
+      it "does not install if the package is installed #{i}" do
+        shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.x86_64.rpm")
+        dnf_package.run_action(:flush_cache)
+        dnf_package.run_action(:install)
+        expect(dnf_package.updated_by_last_action?).to be false
+        expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.x86_64")
+      end
+
+      it "does not install if the i686 package is installed #{i}" do
+        pending "FIXME"
+        shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.i686.rpm")
+        dnf_package.run_action(:flush_cache)
+        dnf_package.run_action(:install)
+        expect(dnf_package.updated_by_last_action?).to be false
+        expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.i686")
+      end
+
+      it "does not install if the prior verison package is installed #{i}" do
+        shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.x86_64.rpm")
+        dnf_package.run_action(:flush_cache)
+        dnf_package.run_action(:install)
+        expect(dnf_package.updated_by_last_action?).to be false
+        expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.2.0-1.x86_64")
+      end
+
+      it "does not install if the prior version i686 package is installed #{i}" do
+        pending "FIXME"
+        shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.i686.rpm")
+        dnf_package.run_action(:flush_cache)
+        dnf_package.run_action(:install)
+        expect(dnf_package.updated_by_last_action?).to be false
+        expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.2.0-1.i686")
       end
     end
   end
