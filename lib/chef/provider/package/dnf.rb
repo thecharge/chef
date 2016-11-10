@@ -149,6 +149,11 @@ class Chef
           @candidate_version
         end
 
+        def real_name
+          resolve_packages if @real_name.nil?
+          @real_name
+        end
+
         # get_current_versions may not guess 'the' correct version that we later pick from
         # what is returned first for the available versions, but it will pick 'a' correct
         # version that satisfies what the user asked for -- which is good enough for an
@@ -221,7 +226,7 @@ class Chef
           # (we do NOT do this resolution early because we want to avoid expensively
           # resolving the candidate_version for the idempotency check)
           current_resource.version[idx] = installed.version_with_arch if installed
-          candidate_version[idx]        = available.version_with_arch if available
+          @candidate_version[idx]       = available.version_with_arch if available
           @real_name[package_name]      = available.name if available
         end
 
@@ -239,7 +244,7 @@ class Chef
 
         def zip(names, versions)
           names.zip(versions).map do |n, v|
-            (v.nil? || v.empty?) ? @real_name[n] : "#{@real_name[n]}-#{v}"
+            (v.nil? || v.empty?) ? real_name[n] : "#{real_name[n]}-#{v}"
           end
         end
 
