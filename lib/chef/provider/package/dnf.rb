@@ -196,6 +196,7 @@ class Chef
         def installed_versions(package_name)
           @installed_versions ||= {}
           @installed_versions[package_name] ||= python_helper.whatinstalled(package_name)
+          @installed_versions[package_name]
         end
 
         def flushcache
@@ -206,6 +207,9 @@ class Chef
         # by the python helper in the preferred order.  if we find an available version
         # that matches something that is installed we pick that one.  if nothing
         # matches then we pick whatever the python script returned first.
+        #
+        # FIXME: action :remove needs to resolve real_name but shouldn't be resolving
+        # candidate_version
         def resolve_package(package_name, idx)
           available_list = available_versions(package_name)
           installed_list = installed_versions(package_name)

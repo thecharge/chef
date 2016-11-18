@@ -26,17 +26,26 @@ def flushcache():
         base.close()
         base = None
 
-def whatavailable(arg):
+def query(arg, installed = False, available = False):
     sack = get_sack()
-    subj = dnf.subject.Subject(arg)
 
-    q = subj.get_best_query(sack)
+    q = sack.query()
+
+    if installed:
+      q = q.installed()
+
+    if available:
+      q = q.available()
+
     q_kwargs = {}
 
+    q_kwargs['provides'] = arg
+
     # handle arch
+    subj = dnf.subject.Subject(arg.split().pop(0))
     poss = dnf.util.first(subj.subj.nevra_possibilities_real(sack, allow_globs=True))
     if not poss:
-      sys.stdout.write('{} nil nil\n'.format(arg))
+      sys.stdout.write('{} nil nil\n'.format(arg.split().pop(0)))
       return
 
     if poss.arch:
@@ -44,45 +53,20 @@ def whatavailable(arg):
     else:
       q_kwargs['arch'] = [ 'noarch', hawkey.detect_arch() ]
 
-    q = q.available()
-
     q = q.filter(**q_kwargs)
 
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
     if not pkgs:
-        sys.stdout.write('{} nil nil\n'.format(arg))
+        sys.stdout.write('{} nil nil\n'.format(arg.split().pop(0)))
     else:
         pkg = pkgs.pop(0)
         sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
 
 def whatinstalled(arg):
-    sack = get_sack()
-    subj = dnf.subject.Subject(arg)
+    query(arg, installed=True)
 
-    q = subj.get_best_query(sack)
-    q_kwargs = {}
-
-    # handle arch
-    poss = dnf.util.first(subj.subj.nevra_possibilities_real(sack, allow_globs=True))
-    if not poss:
-      sys.stdout.write('{} nil nil\n'.format(arg))
-      return
-
-    if poss.arch:
-      q_kwargs['arch'] = [ 'noarch', poss.arch ]
-    else:
-      q_kwargs['arch'] = [ 'noarch', hawkey.detect_arch() ]
-
-    q = q.installed()
-
-    q = q.filter(**q_kwargs)
-
-    pkgs = dnf.query.latest_limit_pkgs(q, 1)
-    if not pkgs:
-        sys.stdout.write('{} nil nil\n'.format(arg))
-    else:
-        pkg = pkgs.pop(0)
-        sys.stdout.write('{} {}:{}-{} {}\n'.format(pkg.name, pkg.epoch, pkg.version, pkg.release, pkg.arch))
+def whatavailable(arg):
+    query(arg, available=True)
 
 def exit_handler(signal, frame):
     sys.exit(0)
@@ -101,9 +85,9 @@ while 1:
     if args:
         command = args.pop(0)
         if command == "whatinstalled":
-            whatinstalled(args.pop(0))
+            whatinstalled(" ".join(args))
         elif command == "whatavailable":
-            whatavailable(args.pop(0))
+            whatavailable(" ".join(args))
         elif command == "flushcache":
             flushcache()
         else:

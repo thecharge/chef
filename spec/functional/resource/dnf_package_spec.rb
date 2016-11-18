@@ -37,61 +37,120 @@ gpgcheck=0
     end
   end
 
+  def flush_cache
+    Chef::Resource::DnfPackage.new("shouldnt-matter", run_context).run_action(:flush_cache)
+    # needed on at least fc23/fc24 sometimes to deal with the dnf cache getting out of sync with the rpm db
+    FileUtils.rm "/var/cache/dnf/@System.solv"
+  end
+
+  def preinstall(*rpms)
+    rpms.each do |rpm|
+      shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/#{rpm}")
+    end
+    flush_cache
+  end
+
   before(:each) do
-    shell_out!("rpm -qa | grep chef-rpmspectest-foo | xargs -r rpm -e")
+    shell_out!("rpm -qa | grep chef_rpm | xargs -r rpm -e")
   end
 
   after(:all) do
-    shell_out!("rpm -qa | grep chef-rpmspectest-foo | xargs -r rpm -e")
+    shell_out!("rpm -qa | grep chef_rpm | xargs -r rpm -e")
     FileUtils.rm "/etc/yum.repos.d/chef-dnf-localtesting.repo"
   end
 
-  let(:package_name) { "chef-rpmspectest-foo" }
+  let(:package_name) { "chef_rpm" }
   let(:dnf_package) { Chef::Resource::DnfPackage.new(package_name, run_context) }
 
-  5.times do |i|
+  1.times do |i|
     describe ":install" do
       context "vanilla use case" do
-        let(:package_name) { "chef-rpmspectest-foo" }
+        let(:package_name) { "chef_rpm" }
         it "installs if the package is not installed #{i}" do
-          dnf_package.run_action(:flush_cache)
+          flush_cache
           dnf_package.run_action(:install)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.x86_64")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
         end
 
         it "does not install if the package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.x86_64.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.10-1.fc24.x86_64.rpm")
           dnf_package.run_action(:install)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.x86_64")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
         end
 
         it "does not install if the prior verison package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.x86_64.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.2-1.fc24.x86_64.rpm")
           dnf_package.run_action(:install)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.2.0-1.x86_64")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.2-1.fc24.x86_64")
         end
 
         it "does not install if the i686 package is installed #{i}" do
-          pending "FIXME: do nothing, or install the x86_64 version?"
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.i686.rpm")
-          dnf_package.run_action(:flush_cache)
+          skip "FIXME: do nothing, or install the x86_64 version?"
+          preinstall("chef_rpm-1.10-1.fc24.i686.rpm")
           dnf_package.run_action(:install)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.i686")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.i686")
         end
 
         it "does not install if the prior version i686 package is installed #{i}" do
-          pending "FIXME: do nothing, or install the x86_64 version?"
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.i686.rpm")
-          dnf_package.run_action(:flush_cache)
+          skip "FIXME: do nothing, or install the x86_64 version?"
+          preinstall("chef_rpm-1.2-1.fc24.i686.rpm")
           dnf_package.run_action(:install)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.2.0-1.i686")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.2-1.fc24.i686")
+        end
+      end
+
+      context "with constraints" do
+        it "works" do
+          flush_cache
+          dnf_package.package_name("chef_rpm >= 1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be true
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
+        end
+
+        it "works" do
+          preinstall("chef_rpm-1.2-1.fc24.x86_64.rpm")
+          dnf_package.package_name("chef_rpm >= 1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be false
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.2-1.fc24.x86_64")
+        end
+
+        it "works" do
+          preinstall("chef_rpm-1.10-1.fc24.x86_64.rpm")
+          dnf_package.package_name("chef_rpm >= 1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be false
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
+        end
+
+        it "works" do
+          flush_cache
+          dnf_package.package_name("chef_rpm > 1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be true
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
+        end
+
+        it "works" do
+          preinstall("chef_rpm-1.2-1.fc24.x86_64.rpm")
+          dnf_package.package_name("chef_rpm > 1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be true
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
+        end
+
+        it "works" do
+          preinstall("chef_rpm-1.10-1.fc24.x86_64.rpm")
+          dnf_package.package_name("chef_rpm > 1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be false
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
         end
       end
     end
@@ -101,88 +160,81 @@ gpgcheck=0
 
     describe ":remove" do
       context "vanilla use case" do
-        let(:package_name) { "chef-rpmspectest-foo" }
+        let(:package_name) { "chef_rpm" }
         it "does nothing if the package is not installed #{i}" do
-          dnf_package.run_action(:flush_cache)
+          flush_cache
+          expect(dnf_package.updated_by_last_action?).to be false
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "removes the package if the package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.x86_64.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.10-1.fc24.x86_64.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "removes the package if the prior verison package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.x86_64.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.2-1.fc24.x86_64.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "removes the package if the i686 package is installed #{i}" do
-          pending "FIXME: should this be fixed or is the current behavior correct?"
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.i686.rpm")
-          dnf_package.run_action(:flush_cache)
+          skip "FIXME: should this be fixed or is the current behavior correct?"
+          preinstall("chef_rpm-1.10-1.fc24.i686.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "removes the package if the prior version i686 package is installed #{i}" do
-          pending "FIXME: should this be fixed or is the current behavior correct?"
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.i686.rpm")
-          dnf_package.run_action(:flush_cache)
+          skip "FIXME: should this be fixed or is the current behavior correct?"
+          preinstall("chef_rpm-1.2-1.fc24.i686.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
       end
 
       context "with 64-bit arch" do
-        let(:package_name) { "chef-rpmspectest-foo.x86_64" }
+        let(:package_name) { "chef_rpm.x86_64" }
         it "does nothing if the package is not installed #{i}" do
-          dnf_package.run_action(:flush_cache)
+          flush_cache
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "removes the package if the package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.x86_64.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.10-1.fc24.x86_64.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "removes the package if the prior verison package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.x86_64.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.2-1.fc24.x86_64.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be true
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("package chef-rpmspectest-foo is not installed")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("package chef_rpm is not installed")
         end
 
         it "does nothing if the i686 package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.10.0-1.i686.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.10-1.fc24.i686.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.10.0-1.i686")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.i686")
         end
 
         it "does nothing if the prior version i686 package is installed #{i}" do
-          shell_out!("rpm -ivh #{CHEF_SPEC_ASSETS}/yumrepo/chef-rpmspectest-foo-1.2.0-1.i686.rpm")
-          dnf_package.run_action(:flush_cache)
+          preinstall("chef_rpm-1.2-1.fc24.i686.rpm")
           dnf_package.run_action(:remove)
           expect(dnf_package.updated_by_last_action?).to be false
-          expect(shell_out("rpm -q chef-rpmspectest-foo").stdout.chomp).to eql("chef-rpmspectest-foo-1.2.0-1.i686")
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.2-1.fc24.i686")
         end
       end
     end
