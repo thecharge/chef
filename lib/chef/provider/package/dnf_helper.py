@@ -19,12 +19,13 @@ def get_sack():
         base.fill_sack()
     return base.sack
 
-# FIXME: this leaks memory like a sieve
+# FIXME: leaks memory and does not work
 def flushcache():
-    global base
-    if base is not None:
-        base.close()
-        base = None
+    try:
+        os.remove('/var/cache/dnf/@System.solv')
+    except OSError:
+        pass
+    get_sack().load_system_repo(build_cache=True)
 
 def query(arg, installed = False, available = False):
     sack = get_sack()
@@ -39,23 +40,21 @@ def query(arg, installed = False, available = False):
 
     q_kwargs = {}
 
-    q_kwargs['provides'] = arg
-
-    # handle arch
+    # handle arch guessing
     subj = dnf.subject.Subject(arg.split().pop(0))
     poss = dnf.util.first(subj.subj.nevra_possibilities_real(sack, allow_globs=True))
-    if not poss:
-      sys.stdout.write('{} nil nil\n'.format(arg.split().pop(0)))
-      return
 
-    if poss.arch:
+    if poss and poss.arch:
       q_kwargs['arch'] = [ 'noarch', poss.arch ]
+      q_kwargs['name'] = poss.name
     else:
       q_kwargs['arch'] = [ 'noarch', hawkey.detect_arch() ]
+      q_kwargs['provides'] = arg
 
     q = q.filter(**q_kwargs)
 
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
+
     if not pkgs:
         sys.stdout.write('{} nil nil\n'.format(arg.split().pop(0)))
     else:

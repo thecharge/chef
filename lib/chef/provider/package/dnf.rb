@@ -99,7 +99,7 @@ class Chef
           end
 
           def flushcache
-            restart # FIXME: make flushcache not leak memory
+            restart # FIXME: make flushcache work + not leak memory
             #with_helper do
             #  stdin.syswrite "flushcache\n"
             #end

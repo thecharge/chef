@@ -40,7 +40,7 @@ gpgcheck=0
   def flush_cache
     Chef::Resource::DnfPackage.new("shouldnt-matter", run_context).run_action(:flush_cache)
     # needed on at least fc23/fc24 sometimes to deal with the dnf cache getting out of sync with the rpm db
-    FileUtils.rm "/var/cache/dnf/@System.solv"
+    FileUtils.rm_f "/var/cache/dnf/@System.solv"
   end
 
   def preinstall(*rpms)
