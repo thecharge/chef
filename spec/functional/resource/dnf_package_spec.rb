@@ -104,6 +104,24 @@ gpgcheck=0
         end
       end
 
+      context "with versions in the name" do
+        it "works" do
+          flush_cache
+          dnf_package.package_name("chef_rpm-1.10")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be true
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.10-1.fc24.x86_64")
+        end
+
+        it "works" do
+          flush_cache
+          dnf_package.package_name("chef_rpm-1.2")
+          dnf_package.run_action(:install)
+          expect(dnf_package.updated_by_last_action?).to be true
+          expect(shell_out("rpm -q chef_rpm").stdout.chomp).to eql("chef_rpm-1.2-1.fc24.x86_64")
+        end
+      end
+
       context "with constraints" do
         it "works" do
           flush_cache

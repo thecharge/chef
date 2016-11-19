@@ -41,17 +41,15 @@ def query(arg, installed = False, available = False):
     q_kwargs = {}
 
     # handle arch guessing
-    subj = dnf.subject.Subject(arg.split().pop(0))
+    subj = dnf.subject.Subject(arg)
     poss = dnf.util.first(subj.subj.nevra_possibilities_real(sack, allow_globs=True))
 
     if poss and poss.arch:
-      q_kwargs['arch'] = [ 'noarch', poss.arch ]
-      q_kwargs['name'] = poss.name
+      q = q.filter(arch=[ 'noarch', poss.arch ])
+      q = q.filter(name=poss.name)
     else:
-      q_kwargs['arch'] = [ 'noarch', hawkey.detect_arch() ]
-      q_kwargs['provides'] = arg
-
-    q = q.filter(**q_kwargs)
+      q = q.filter(arch=[ 'noarch', hawkey.detect_arch() ])
+      q = q.filter(provides=arg)
 
     pkgs = dnf.query.latest_limit_pkgs(q, 1)
 
